@@ -8,7 +8,8 @@
         {
             "name":"BestBuy",
             "url":"https://www.bestbuy.com/site/searchpage.jsp?st=Nvidia+3080",
-            "button-text":"Add to Cart"        }
+            "button-text":"Add to Cart"
+        }
     ],
     "users":[
         {
