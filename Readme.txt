@@ -26,3 +26,6 @@ Logs are stored in stock.txt
 ```
 tail -f stock.txt
 ```
+
+Note, there's no "cooloff" config at the moment, you'll get a text message every time it loops while $company has stock.
+This is very annoying if you misconfigure your searches.
