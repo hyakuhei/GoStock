@@ -1,3 +1,5 @@
+This is my "HelloWorld" in Go... Feedback very welcome.
+
 GoStock is designed to take a specially crafted URL, and look for "Buy Buttons"
 You can use this to send you SMS alerts (From the Twilio service) when something
 you are interested in becomes available to purchase online.
