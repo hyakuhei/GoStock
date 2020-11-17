@@ -134,7 +134,7 @@ func main() {
 			switch uk {
 			case "name":
 				user.Name = uv.(string)
-				log.Info("Got user with name ", user.Name)
+				log.Info("Loaded user ", user.Name)
 			case "cell":
 				user.Cell = uv.(string)
 			case "targets":
@@ -160,13 +160,13 @@ func main() {
 	for {
 		select {
 		case <-ticker.C:
-			log.Info("Looping")
 			for _, target := range targets {
 				go crawl(target, timing.URLTimout, ch)
 			}
 		case res := <-ch:
+			log.Info(fmt.Sprintf("%s had [%d] stock", res.target.Name, res.matches))
+
 			if res.matches > 0 {
-				log.Info("Matches", res.target.Name, res.matches)
 
 				// Crikey, there's stock - better notify our users!
 				for _, user := range res.target.Users {
