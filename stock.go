@@ -62,7 +62,7 @@ func main() {
 
 	log.SetOutput(file)
 	log.SetFormatter(&log.JSONFormatter{})
-	log.SetLevel(log.InfoLevel)
+	log.SetLevel(log.InfoLevel) // TODO: Make this a config option
 
 	// Read in config from environment
 	configJSON := os.Getenv("STOCKCONF")
@@ -167,7 +167,6 @@ func main() {
 			log.Info(fmt.Sprintf("%s had [%d] stock", res.target.Name, res.matches))
 
 			if res.matches > 0 {
-
 				// Crikey, there's stock - better notify our users!
 				for _, user := range res.target.Users {
 					go notify(user, res, &twilio)
@@ -238,6 +237,7 @@ func notify(user *User, result *Result, twilio *Twilio) {
 	values.Set("From", twilio.From)
 	values.Set("Body", message)
 
+	// Prepare the POST request with form values (set above), headers and auth
 	req, err := http.NewRequest("POST", twilio.URL, strings.NewReader(values.Encode()))
 	if err != nil {
 		log.Fatal(err)
@@ -246,12 +246,15 @@ func notify(user *User, result *Result, twilio *Twilio) {
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
+	// Attempt to make the request
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if resp.StatusCode != 201 {
+	// Check the outcome of the request
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		log.Debug(resp.Status)
 		var data map[string]interface{}
 		decoder := json.NewDecoder(resp.Body)
 		err := decoder.Decode(&data)
@@ -259,6 +262,6 @@ func notify(user *User, result *Result, twilio *Twilio) {
 			log.Info("Twilio message dispatched", data["sid"])
 		}
 	} else {
-		log.Warn(resp.Status)
+		log.Warn(resp.Status) // resp.Status is a string, whereas resp.StatusCode is an int
 	}
 }
