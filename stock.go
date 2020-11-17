@@ -78,7 +78,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Twilio is just a flat map string:string so suck in all kv
+	// Populate twilio struct
 	for k, v := range config["twilio"].(map[string]interface{}) {
 		// Using a switch statement to be explicit about what is allowed
 		switch k {
@@ -90,13 +90,13 @@ func main() {
 			twilio.Pass = v.(string)
 		case "url":
 			twilio.URL = v.(string)
-		default:
+		default: // Catch unknown config options
 			log.Fatal("Unknown twilio configuration")
 		}
 	}
 	// TODO: Verify that all required fields are set
 
-	// Timing
+	// Populate the timing config struct
 	for k, v := range config["timing"].(map[string]interface{}) {
 		switch k {
 		case "urltimeout":
@@ -109,7 +109,7 @@ func main() {
 	}
 	// TODO: Verify that all required fields are set
 
-	// Targets is an array of maps, we want to store as a map of maps
+	// Populate Targets struct
 	for _, m := range config["targets"].([]interface{}) {
 		target := Target{}
 		for tk, tv := range m.(map[string]interface{}) {
@@ -127,10 +127,7 @@ func main() {
 		targets[target.Name] = &target
 	} // TODO: Verify that all required fields are set
 
-	// Users is an array of maps, we want to store as a map of maps
-	// Users also has an array called "Targets", which are targets the user is interested in
-
-	//Targets is just a flat map string:string so suck in all kv
+	// Populate Users
 	for _, m := range config["users"].([]interface{}) {
 		user := User{}
 		for uk, uv := range m.(map[string]interface{}) {
@@ -152,8 +149,10 @@ func main() {
 		users[user.Name] = &user
 	} // TODO: Verify that all required fields are set
 
-	// Ok so we have our config, now we need to go fetch the pages
-
+	/*
+	 * Config stuff is all loaded in at this point
+	 * Next, setup ticker which will govern how quickly we the search will loop
+	 */
 	ticker := time.NewTicker(timing.Looptime)
 	ch := make(chan *Result)
 
@@ -161,7 +160,7 @@ func main() {
 	for {
 		select {
 		case <-ticker.C:
-			log.Info("Looping\n")
+			log.Info("Looping")
 			for _, target := range targets {
 				go crawl(target, timing.URLTimout, ch)
 			}
@@ -170,7 +169,6 @@ func main() {
 				log.Info("Matches", res.target.Name, res.matches)
 
 				// Crikey, there's stock - better notify our users!
-				// No need to do so in serial, these things should be short lived, don't contain loops
 				for _, user := range res.target.Users {
 					go notify(user, res, &twilio)
 				}
@@ -181,8 +179,7 @@ func main() {
 
 // Crawl the URL from the target
 // Look for the attributes
-// If attributes found, send Target on channel
-// If not, send nil
+// Count the number of matches we find in a Result struct and return it.
 func crawl(t *Target, timeout time.Duration, ch chan *Result) {
 	// hit the url
 	// look for the attr
@@ -197,6 +194,7 @@ func crawl(t *Target, timeout time.Duration, ch chan *Result) {
 		log.Fatal(err)
 	}
 
+	//TODO: Allow user to set the user-agent string via config
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.183 Safari/537.36")
 	resp, err := client.Do(req)
 	if err != nil {
@@ -224,7 +222,7 @@ func crawl(t *Target, timeout time.Duration, ch chan *Result) {
 	ch <- &result
 }
 
-//ToDo: Error handling (just use log.Fatal for now)
+//TODO: Error handling (just use log.Fatal for now)
 func notify(user *User, result *Result, twilio *Twilio) {
 	snow := time.Now().Format(time.Stamp)
 	message := fmt.Sprintf(
@@ -258,9 +256,9 @@ func notify(user *User, result *Result, twilio *Twilio) {
 		decoder := json.NewDecoder(resp.Body)
 		err := decoder.Decode(&data)
 		if err == nil {
-			fmt.Println(data["sid"])
+			log.Info("Twilio message dispatched", data["sid"])
 		}
 	} else {
-		fmt.Println(resp.Status)
+		log.Warn(resp.Status)
 	}
 }
