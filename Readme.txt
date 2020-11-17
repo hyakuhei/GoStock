@@ -18,6 +18,11 @@ export STOCKCONF=$(<config.json)
 ```
 
 To run the application:
+```
 go run ./stock.go
+```
 
 Logs are stored in stock.txt
+```
+tail -f stock.txt
+```
