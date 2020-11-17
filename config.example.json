@@ -1,0 +1,30 @@
+{
+    "targets":[
+        {
+            "name":"NewEgg",
+            "url":"https://www.newegg.com/p/pl?d=nvidia+3080&N=8000%204841%20100007709&isdeptsrh=1&PageSize=96",
+            "button-text":"Add to cart"
+        },
+        {
+            "name":"BestBuy",
+            "url":"https://www.bestbuy.com/site/searchpage.jsp?st=Nvidia+3080",
+            "button-text":"Add to Cart"        }
+    ],
+    "users":[
+        {
+            "name":"Rob",
+            "cell":"+20655533992",
+            "targets":["BestBuy", "NewEgg"]
+        }
+    ],
+    "twilio":{
+        "from":"+123456779191",
+        "user":"DEADBEEF",
+        "pass":"41414141",
+        "url":"https://api.twilio.com/2010-04-01/Accounts/DEADBEEF/Messages.json"
+    },
+    "timing":{
+        "urltimeout":10,
+        "looptime":5
+    }
+}
