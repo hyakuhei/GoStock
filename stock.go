@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -66,6 +67,9 @@ func main() {
 
 	// Read in config from environment
 	configJSON := os.Getenv("STOCKCONF")
+	if configJSON == "" {
+		log.Fatal("$STOCKCONF is not set.")
+	}
 
 	twilio := Twilio{}
 	timing := Timing{}
@@ -197,8 +201,24 @@ func crawl(t *Target, timeout time.Duration, ch chan *Result) {
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.183 Safari/537.36")
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Warn(err)
+		switch err := err.(type) {
+		case net.Error:
+			if err.Timeout() {
+				log.Warn("Timeout accessing ", t.URL)
+				ch <- &result
+				return
+			}
+		case *url.Error:
+			log.Error("URL Error", t.URL)
+			ch <- &result
+			return
+		default:
+			log.Error(err)
+			ch <- &result
+			return
+		}
 	}
+
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
