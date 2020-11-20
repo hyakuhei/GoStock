@@ -63,7 +63,7 @@ func main() {
 
 	log.SetOutput(file)
 	log.SetFormatter(&log.JSONFormatter{})
-	log.SetLevel(log.InfoLevel) // TODO: Make this a config option
+	log.SetLevel(log.DebugLevel) // TODO: Make this a config option
 
 	// Read in config from environment
 	configJSON := os.Getenv("STOCKCONF")
@@ -98,6 +98,7 @@ func main() {
 			log.Fatal("Unknown twilio configuration")
 		}
 	}
+	log.Debug(twilio)
 	// TODO: Verify that all required fields are set
 
 	// Populate the timing config struct
@@ -111,9 +112,10 @@ func main() {
 			log.Fatal("Unknown timing config")
 		}
 	}
+	log.Debug(timing)
 	// TODO: Verify that all required fields are set
 
-	// Populate Targets struct
+	// Populate Targets map[string]*Target
 	for _, m := range config["targets"].([]interface{}) {
 		target := Target{}
 		for tk, tv := range m.(map[string]interface{}) {
@@ -130,6 +132,7 @@ func main() {
 		}
 		targets[target.Name] = &target
 	} // TODO: Verify that all required fields are set
+	log.Debug(targets)
 
 	// Populate Users
 	for _, m := range config["users"].([]interface{}) {
@@ -144,7 +147,11 @@ func main() {
 			case "targets":
 				for _, t := range uv.([]interface{}) {
 					// Get the matching target and add the user
-					targets[t.(string)].Users = append(targets[t.(string)].Users, &user)
+					if _, ok := targets[t.(string)]; ok {
+						targets[t.(string)].Users = append(targets[t.(string)].Users, &user)
+					} else {
+						log.Error(fmt.Sprintf("User has target %s configured but no corresponding target exists", user.Name, t.(string)))
+					}
 				}
 			default:
 				log.Fatal("Unkown user configuration")
@@ -152,6 +159,7 @@ func main() {
 		}
 		users[user.Name] = &user
 	} // TODO: Verify that all required fields are set
+	log.Debug(users)
 
 	/*
 	 * Config stuff is all loaded in at this point
