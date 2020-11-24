@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
@@ -39,10 +41,11 @@ type Twilio struct {
 	URL  string
 }
 
-// Timing config
-type Timing struct {
+// Config config
+type Config struct {
 	URLTimout time.Duration
 	Looptime  time.Duration
+	OSNotify  bool
 }
 
 // Result of a search
@@ -65,6 +68,8 @@ func main() {
 	log.SetFormatter(&log.JSONFormatter{})
 	log.SetLevel(log.DebugLevel) // TODO: Make this a config option
 
+	log.Debug(fmt.Sprintf("[%s] operating system detected", runtime.GOOS))
+
 	// Read in config from environment
 	configJSON := os.Getenv("STOCKCONF")
 	if configJSON == "" {
@@ -72,7 +77,7 @@ func main() {
 	}
 
 	twilio := Twilio{}
-	timing := Timing{}
+	Config := Config{}
 	targets := make(map[string]*Target)
 	users := make(map[string]*User)
 
@@ -80,6 +85,18 @@ func main() {
 	err = json.Unmarshal([]byte(configJSON), &config)
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	// Validate that the config has the correct high level fields
+	for k := range config {
+		switch k {
+		case "targets": // ok
+		case "users": // ok
+		case "twilio": // ok
+		case "config": // ok
+		default: // bad
+			log.Fatal(fmt.Sprintf("Invalid top level configuration key [%s]", k))
+		}
 	}
 
 	// Populate twilio struct
@@ -101,18 +118,20 @@ func main() {
 	log.Debug(twilio)
 	// TODO: Verify that all required fields are set
 
-	// Populate the timing config struct
-	for k, v := range config["timing"].(map[string]interface{}) {
+	// Populate the Config config struct
+	for k, v := range config["config"].(map[string]interface{}) {
 		switch k {
 		case "urltimeout":
-			timing.URLTimout = time.Duration(v.(float64)) * time.Second
+			Config.URLTimout = time.Duration(v.(float64)) * time.Second
 		case "looptime":
-			timing.Looptime = time.Duration(v.(float64)) * time.Second
+			Config.Looptime = time.Duration(v.(float64)) * time.Second
+		case "osnotify":
+			Config.OSNotify = v.(bool)
 		default:
-			log.Fatal("Unknown timing config")
+			log.Fatal("Unknown key in config")
 		}
 	}
-	log.Debug(timing)
+	log.Debug(Config)
 	// TODO: Verify that all required fields are set
 
 	// Populate Targets map[string]*Target
@@ -150,7 +169,7 @@ func main() {
 					if _, ok := targets[t.(string)]; ok {
 						targets[t.(string)].Users = append(targets[t.(string)].Users, &user)
 					} else {
-						log.Error(fmt.Sprintf("User has target %s configured but no corresponding target exists", user.Name, t.(string)))
+						log.Error(fmt.Sprintf("User [%s] has target [%s] configured but no corresponding target exists", user.Name, t.(string)))
 					}
 				}
 			default:
@@ -165,15 +184,15 @@ func main() {
 	 * Config stuff is all loaded in at this point
 	 * Next, setup ticker which will govern how quickly we the search will loop
 	 */
-	ticker := time.NewTicker(timing.Looptime)
+	ticker := time.NewTicker(Config.Looptime)
 	ch := make(chan *Result)
 
-	// Loop every timing.Looptime and launch a crawler for each target
+	// Loop every Config.Looptime and launch a crawler for each target
 	for {
 		select {
 		case <-ticker.C:
 			for _, target := range targets {
-				go crawl(target, timing.URLTimout, ch)
+				go crawl(target, Config.URLTimout, ch)
 			}
 		case res := <-ch:
 			log.Info(fmt.Sprintf("%s had [%d] stock", res.target.Name, res.matches))
@@ -249,8 +268,25 @@ func crawl(t *Target, timeout time.Duration, ch chan *Result) {
 	ch <- &result
 }
 
+// osnotify will use native OS notification features
+// to tell the user about stock found
+func osnotify(user *User, result *Result) {
+	if runtime.GOOS == "darwin" {
+		// osascript -e 'display notification "Lorem ipsum dolor sit amet" with title "Title"'
+		cmdString := fmt.Sprintf("display notification \"Has %d Stock\" sound name \"Hero\" with title \"%s\" ",
+			result.matches,
+			result.target.Name)
+		cmd := exec.Command("osascript", "-e", cmdString)
+		err := cmd.Run()
+		if err != nil {
+			log.Error(err)
+		}
+	}
+}
+
 //TODO: Error handling (just use log.Fatal for now)
 func notify(user *User, result *Result, twilio *Twilio) {
+	go osnotify(user, result)
 	snow := time.Now().Format(time.Stamp)
 	message := fmt.Sprintf(
 		"%s has %d items in stock\nTime: %s\n%s",

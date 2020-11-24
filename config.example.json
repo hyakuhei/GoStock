@@ -34,8 +34,9 @@
         "pass":"41414141",
         "url":"https://api.twilio.com/2010-04-01/Accounts/DEADBEEF/Messages.json"
     },
-    "timing":{
+    "config":{
         "urltimeout":10,
-        "looptime":5
+        "looptime":5,
+        "osnotify":true
     }
 }
