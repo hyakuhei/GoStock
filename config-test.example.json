@@ -15,7 +15,8 @@
         {
             "name":"Rob",
             "cell":"+12355515321",
-            "targets":["BestBuy Nvidia 3080", "NewEgg Nvidia 3080"]
+            "targets":["BestBuy Nvidia 3080", "NewEgg Nvidia 3080"],
+            "cooldown":90
         }
     ],
     "twilio":{
@@ -26,7 +27,7 @@
     },
     "config":{
         "urltimeout":10,
-        "looptime":5,
+        "looptime":60,
         "osnotify":true
     }
 }

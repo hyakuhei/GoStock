@@ -29,8 +29,10 @@ type Target struct {
 
 // User -
 type User struct {
-	Name string
-	Cell string
+	Name     string
+	Cell     string
+	Cooldown int
+	History  map[string]time.Time
 }
 
 // Twilio -
@@ -155,7 +157,7 @@ func main() {
 
 	// Populate Users
 	for _, m := range config["users"].([]interface{}) {
-		user := User{}
+		user := User{History: make(map[string]time.Time)}
 		for uk, uv := range m.(map[string]interface{}) {
 			switch uk {
 			case "name":
@@ -172,6 +174,8 @@ func main() {
 						log.Error(fmt.Sprintf("User [%s] has target [%s] configured but no corresponding target exists", user.Name, t.(string)))
 					}
 				}
+			case "cooldown":
+				user.Cooldown = int(uv.(float64))
 			default:
 				log.Fatal("Unkown user configuration")
 			}
@@ -199,11 +203,28 @@ func main() {
 
 			if res.matches > 0 {
 				// Crikey, there's stock - better notify our users!
+				now := time.Now()
 				for _, user := range res.target.Users {
-					go notify(user, res, &twilio)
-					if Config.OSNotify == true {
-						go osnotify(user, res)
+					// If this target URL is in cooldown for this user then don't send a notification
+
+					sendNotification := false
+					then, isCooling := user.History[res.target.URL]
+					if isCooling == true {
+						delta := now.Sub(then).Seconds()
+						if int(delta) >= user.Cooldown {
+							sendNotification = true
+						}
+					} else {
+						sendNotification = true
 					}
+
+					if sendNotification == true {
+						go notify(user, res, &twilio)
+						if Config.OSNotify == true {
+							go osnotify(user, res)
+						}
+					}
+
 				}
 			}
 		}
@@ -289,7 +310,8 @@ func osnotify(user *User, result *Result) {
 
 //TODO: Error handling (just use log.Fatal for now)
 func notify(user *User, result *Result, twilio *Twilio) {
-	snow := time.Now().Format(time.Stamp)
+	now := time.Now()
+	snow := now.Format(time.Stamp)
 	message := fmt.Sprintf(
 		"%s has %d items in stock\nTime: %s\n%s",
 		result.target.Name,
@@ -326,6 +348,9 @@ func notify(user *User, result *Result, twilio *Twilio) {
 		err := decoder.Decode(&data)
 		if err == nil {
 			log.Info("Twilio message dispatched", data["sid"])
+			// The message was sent correctly, so now we add a note of the current time to the history for this user, using the URL of the target.
+			// Ideally we'd track the actual button, not the site, because other buttons may become available during the cooldown period... Not super likely though.
+			user.History[result.target.URL] = now // We set this near the entrypoint to the function
 		}
 	} else {
 		log.Warn(resp.Status) // resp.Status is a string, whereas resp.StatusCode is an int

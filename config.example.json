@@ -25,7 +25,8 @@
         {
             "name":"Rob",
             "cell":"+20655533992",
-            "targets":["BestBuy", "NewEgg"]
+            "targets":["BestBuy", "NewEgg"],
+            "cooldown": 90
         }
     ],
     "twilio":{
