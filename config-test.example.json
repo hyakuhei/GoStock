@@ -1,12 +1,12 @@
 {
     "targets":[
         {
-            "name":"NewEgg",
+            "name":"NewEgg Nvidia 3080",
             "url":"https://www.newegg.com/p/pl?d=thermal&N=4131%208000%204841&PageSize=96",
             "button-text":"Add to cart"
         },
         {
-            "name":"BestBuy",
+            "name":"BestBuy Nvidia 3080",
             "url":"https://www.bestbuy.com/site/searchpage.jsp?st=Nvidia",
             "button-text":"Add to Cart"
         }
@@ -14,8 +14,8 @@
     "users":[
         {
             "name":"Rob",
-            "cell":"+20655533992",
-            "targets":["BestBuy", "NewEgg"]
+            "cell":"+12355515321",
+            "targets":["BestBuy Nvidia 3080", "NewEgg Nvidia 3080"]
         }
     ],
     "twilio":{
@@ -24,8 +24,9 @@
         "pass":"41414141",
         "url":"https://api.twilio.com/2010-04-01/Accounts/DEADBEEF/Messages.json"
     },
-    "timing":{
+    "config":{
         "urltimeout":10,
-        "looptime":5
+        "looptime":5,
+        "osnotify":true
     }
 }
