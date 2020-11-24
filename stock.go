@@ -77,7 +77,7 @@ func main() {
 	}
 
 	twilio := Twilio{}
-	Config := Config{}
+	Config := Config{OSNotify: false}
 	targets := make(map[string]*Target)
 	users := make(map[string]*User)
 
@@ -201,6 +201,9 @@ func main() {
 				// Crikey, there's stock - better notify our users!
 				for _, user := range res.target.Users {
 					go notify(user, res, &twilio)
+					if Config.OSNotify == true {
+						go osnotify(user, res)
+					}
 				}
 			}
 		}
@@ -286,7 +289,6 @@ func osnotify(user *User, result *Result) {
 
 //TODO: Error handling (just use log.Fatal for now)
 func notify(user *User, result *Result, twilio *Twilio) {
-	go osnotify(user, result)
 	snow := time.Now().Format(time.Stamp)
 	message := fmt.Sprintf(
 		"%s has %d items in stock\nTime: %s\n%s",
