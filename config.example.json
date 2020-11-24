@@ -11,6 +11,11 @@
             "button-text":"Add to cart"
         },
         {
+            "name":"Microsoft Xbox Series X",
+            "url":"https://www.xbox.com/en-us/configure/8wj714n3rbtl",
+            "button-text":"Checkout"
+        },
+        {
             "name":"BestBuy Nvidia 3080",
             "url":"https://www.bestbuy.com/site/searchpage.jsp?st=Nvidia+3080",
             "button-text":"Add to Cart"
