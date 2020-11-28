@@ -254,23 +254,17 @@ func crawl(t *Target, timeout time.Duration, ch chan *Result) {
 	if err != nil {
 		switch err := err.(type) {
 		case net.Error:
-			if err.Timeout() {
-				log.Warn("Timeout accessing ", t.URL)
-				ch <- &result
-				return
-			}
+			log.Warn("Timeout accessing ", t.URL) // It's ok that there's a timeout or lookup problem, our code isn't broken.
+			ch <- &result
+			return
 		case *url.Error:
-			log.Error("URL Error", t.URL)
-			ch <- &result
-			return
+			log.Fatal("URL Error", t.URL) // code or config is broken.
 		default:
-			log.Error(err)
-			ch <- &result
-			return
+			log.Fatal(err) /// code or config is broken.
 		}
+	} else {
+		defer resp.Body.Close()
 	}
-
-	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		log.Warn(t.Name, resp.Status)
